@@ -1,8 +1,10 @@
 package preprc;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,38 +18,32 @@ import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.omg.CORBA.FREE_MEM;
-
 public class Preprocessor {
 
-	static Pattern roiterP = Pattern
+	private static Pattern roiterP = Pattern
 			.compile("<REUTERS[.\\s\\D\\d]*?>([\\s\\d\\D.]*?[^</REUTERS>])</REUTERS>");
-	static Pattern topicP = Pattern
+	private static Pattern topicP = Pattern
 			.compile("<TOPICS><D>(([\\s\\d\\D]*)?)</D></TOPICS>");
-	static Pattern idP = Pattern.compile("NEWID=\"([\\d]*)\"");
-	static Pattern bodyP = Pattern
+	private static Pattern idP = Pattern.compile("NEWID=\"([\\d]*)\"");
+	private static Pattern bodyP = Pattern
 			.compile("<BODY[.\\s\\D\\d]*?>([\\s\\d\\D.]*?[^</BODY>])</BODY>");
 
-	static String file = "/home/grad06/vaidy083/Documents/reuters";
-	static String stopLL = "/home/grad06/vaidy083/Downloads/stoplist.txt";
+	private static final String file = "/home/grad06/vaidy083/Documents/reuters";
+	private static final String stopLL = "/home/grad06/vaidy083/Downloads/stoplist.txt";
+	private static final String outputPath = "/home/grad06/vaidy083/";
 
-	static String test = "<REUTERS TOPICS=\"YES\" LEWISSPLIT=\"TRAIN\" CGISPLIT=\"TRAINING-SET\" "
-			+ "OLDID=\"5553\" NEWID=\"10\">\n\n\n\n<BODY>\n\n\nshgfsdyf\n</BODY><DATE>26-FEB-1987 15:18:06.67</DATE>\n</REUTERS>"
-			+ "<REUTERS>vivekis</REUTERS><REUTERS asdfgsdfhgsd>jsd</REUTERS>";
-
-	static String testID = "<><><asdgasduiyadsfsfg<REUTERS NEWID=\" 1234 \">\"\"";
-	static Map<String, Integer> topicFrequency;
-	static Set<String> stopList;
+	private static Map<String, Integer> topicFrequency;
+	private static Map<String, Integer> stringIdMap;
+	private static int currentAllocId = 0;
+	private static Set<String> stopList;
 
 	public static void main(String[] args) {
-		// System.out.print(removeNums(testID));
-		// System.exit(0);
-		File f = new File(file);
-		List<List<String>> roiterData = new ArrayList<>();
-		File[] roitersFiles = f.listFiles();
+		final File f = new File(file);
+		final File[] roitersFiles = f.listFiles();
+		final List<List<String>> roiterData = new ArrayList<>();
 		topicFrequency = new HashMap<>();
 
-		for (File currentFile : roitersFiles) {
+		for (final File currentFile : roitersFiles) {
 			if (currentFile.getName().contains(".sgm")) {
 				List<String> currentRoitersTags = new ArrayList<>();
 				String fileContents = readFile(currentFile);
@@ -59,13 +55,13 @@ public class Preprocessor {
 			}
 		}
 
-		List<Article> articleLists = new ArrayList<>();
+		final List<Article> articleLists = new ArrayList<>();
 
 		for (int i = 0; i < roiterData.size(); i++) {
-			List<String> currentRoiters = roiterData.get(i);
+			final List<String> currentRoiters = roiterData.get(i);
 			for (int j = 0; j < currentRoiters.size(); j++) {
-				String currentTag = currentRoiters.get(j);
-				String topic = getTopic(currentTag);
+				final String currentTag = currentRoiters.get(j);
+				final String topic = getTopic(currentTag);
 				if (topic != null) {
 					int id = getId(currentTag);
 					String body = getBody(currentTag);
@@ -75,9 +71,9 @@ public class Preprocessor {
 			}
 		}
 
-		Set<String> frequentArticles = get20(topicFrequency);
+		final Set<String> frequentArticles = get20(topicFrequency);
 		topicFrequency.clear();
-		System.out.println(frequentArticles);
+
 		Iterator<Article> iter = articleLists.iterator();
 		while (iter.hasNext()) {
 			if (!frequentArticles.contains(iter.next().topic)) {
@@ -90,6 +86,7 @@ public class Preprocessor {
 		while (st.hasMoreTokens()) {
 			stopList.add(st.nextToken());
 		}
+
 		for (Article art : articleLists) {
 			if (art.body != null) {
 				art.body = removeNASCII(art.body);
@@ -97,6 +94,7 @@ public class Preprocessor {
 				art.body = art.body.replaceAll("[^a-z0-9]", " ");
 				art.body = removeNums(art.body);
 				art.body = removeStop(art.body);
+				art.body = getStemmed(art.body);
 				st = new StringTokenizer(art.body);
 				while (st.hasMoreTokens()) {
 					addFrequency(st.nextToken());
@@ -111,9 +109,98 @@ public class Preprocessor {
 		}
 		System.out.println(cc);
 		for (Article art : articleLists) {
-			if (art.body != null)
+			if (art.body != null) {
 				art.body = removeInfrequentWords(art.body);
+			}
 		}
+		
+		iter = articleLists.iterator();
+		
+		while(iter.hasNext()){
+			Article currArt = iter.next();
+			if(currArt.body == null || currArt.body.isEmpty()){
+				iter.remove();
+			}
+		}
+
+		List<int[]> ijv = new ArrayList<>();
+		List<String> ijvFileContent = new ArrayList<>();
+		List<String> stringIdFile = new ArrayList<>();
+
+		stringIdMap = new HashMap<>();
+		for (Article currentArticle : articleLists) {
+			int i = currentArticle.id;
+			Map<String, Integer> words = new HashMap<>();
+			st = new StringTokenizer(currentArticle.body);
+			while (st.hasMoreTokens()) {
+				String currentWord = st.nextToken();
+				if (words.containsKey(currentWord)) {
+					words.put(currentWord, words.get(currentWord) + 1);
+				} else {
+					words.put(currentWord, 1);
+				}
+			}
+			for (Entry<String, Integer> currentEntry : words.entrySet()) {
+				int[] ijvEntry = new int[3];
+				ijvEntry[0] = i;
+				ijvEntry[1] = getStringId(currentEntry.getKey());
+				ijvEntry[2] = currentEntry.getValue();
+				ijv.add(ijvEntry);
+			}
+		}
+
+		for (int[] x : ijv) {
+			String asd = x[0] + " " + x[1] + " " + x[2];
+			ijvFileContent.add(asd);
+		}
+
+		writeFile(outputPath + "ijvFile1", ijvFileContent);
+		
+		ijvFileContent.clear();
+		for (int[] x : ijv) {
+			double x2 = Math.sqrt(x[2]) + 1;
+			String asd = x[0] + " " + x[1] + " " + x2;
+			ijvFileContent.add(asd);
+		}
+		writeFile(outputPath + "ijvFile2", ijvFileContent);
+		ijvFileContent.clear();
+		for (int[] x : ijv) {
+			double x2 = Math.log(x[2])/Math.log(2) + 1;
+			String asd = x[0] + " " + x[1] + " " + x2;
+			ijvFileContent.add(asd);
+		}
+		writeFile(outputPath + "ijvFile3", ijvFileContent);
+		for (Entry<String, Integer> frequencyMapEntry : stringIdMap.entrySet()) {
+			stringIdFile.add(frequencyMapEntry.getKey() + " "
+					+ frequencyMapEntry.getValue());
+		}
+		writeFile(outputPath + "stringId", stringIdFile);
+
+	}
+
+	static void writeFile(String filePath, List<String> data) {
+		File f = new File(filePath);
+		BufferedWriter bw;
+
+		try {
+			bw = new BufferedWriter(new FileWriter(f));
+			for (String x : data) {
+				bw.write(x + "\n");
+			}
+			bw.flush();
+			bw.close();
+		} catch (IOException e) {
+			System.out.println("Error creating file");
+		}
+
+	}
+
+	static int getStringId(String str) {
+		if (!stringIdMap.containsKey(str)) {
+			stringIdMap.put(str, currentAllocId);
+			currentAllocId++;
+		}
+		return stringIdMap.get(str);
 	}
 
 	static String removeInfrequentWords(String s) {
@@ -230,6 +317,21 @@ public class Preprocessor {
 			if (!myStr.matches("\\d+")) {
 				sb.append(" " + myStr);
 			}
+		}
+		return sb.toString();
+	}
+
+	static String getStemmed(String s) {
+		StringBuilder sb = new StringBuilder();
+		StringTokenizer st = new StringTokenizer(s);
+		while (st.hasMoreTokens()) {
+			String currentString = st.nextToken();
+			Stemmer stem = new Stemmer();
+			for (char c : currentString.toCharArray()) {
+				stem.add(c);
+			}
+			stem.stem();
+			sb.append(" " + stem.toString());
 		}
 		return sb.toString();
 	}
