@@ -51,6 +51,9 @@ public class SSE {
                     if (p.getjv().containsKey(i)) {
                         SSEVal += Math.pow(pr.getjv().get(i) - p.getjv().get(i), 2);
                     }
+                    else{
+                        SSEVal += pr.getjv().get(i) * pr.getjv().get(i);
+                    }
                 }
             }
             System.out.println("SSE:" + SSEVal);

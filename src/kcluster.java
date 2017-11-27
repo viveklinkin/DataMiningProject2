@@ -1,6 +1,7 @@
 
 import java.io.*;
 import java.util.*;
+import java.util.Map.Entry;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -19,26 +20,111 @@ public class kcluster {
 
     static final LinkedHashMap<Integer, Map<Integer, Double>> ijv = new LinkedHashMap<>();
     static final TreeSet<Point> centroids = new TreeSet<>();
+    static final Map<Integer, String> classFileVals = new HashMap<>();
+    static final Map<String, Integer> labels = new HashMap<>();
 
     static String inputFile = "/home/vivek/NetBeansProjects/JavaApplication5/output/ijvFile1";
+    static String classFile = "/home/vivek/NetBeansProjects/JavaApplication5/output/reuters.class";
     static String outputFile = "";
-    static String classFile = "";
     static int numtrials = 20;
     static int numclusters = 10;
 
     static int outp = 0;
-    static String clusterteringCriterion = "SSE";
+    static String clusterteringCriterion = "E1";
 
     public static void main(String args[]) {
         getijv();
+        getClassFileContents();
+        Map<Integer, Integer> res = null;
         if (clusterteringCriterion.equals(SSE_CRITERION)) {
-            new SSE(numclusters, numtrials, ijv).cluster();
+            res = new SSE(numclusters, numtrials, ijv).cluster();
+
         } else if (clusterteringCriterion.equals(I2_CRITERION)) {
-
+            res = new I2(numclusters, numtrials, ijv).cluster();
         } else if (clusterteringCriterion.equals(E1_CRITERION)) {
-
+            res = new E1(numclusters, numtrials, ijv).cluster();
         } else {
-            throw new UnsupportedOperationException("This Criterion is not supported");
+            throw new UnsupportedOperationException("This Criterion is not supported, try SSE, I2 or E1");
+        }
+        int[][] matrix = new int[numclusters][labels.size()];
+        for (int i = 0; i < matrix.length; i++) {
+            for (int j = 0; j < matrix[i].length; j++) {
+                matrix[i][j] = 0;
+            }
+        }
+        for (Entry<Integer, Integer> currentEntry : res.entrySet()) {
+            int articleNo = currentEntry.getKey();
+            int clusterNo = currentEntry.getValue();
+            int labelNo = labels.get(classFileVals.get(articleNo));
+            matrix[clusterNo][labelNo]++;
+        }
+
+        System.out.println("Purity: " + getTotalPurity(matrix));
+        System.out.println("Entropy: " + getTotalEntropy(matrix));
+    }
+
+    static double getEntropy(int[] a) {
+        double x = 0;
+        double sum = getSum(a);
+        for (int i : a) {
+            double pij = ((double) i) / sum;
+            if (pij != 0) {
+                x += Math.abs(pij * (Math.log(pij) / Math.log(2)));
+            }
+        }
+        return x;
+    }
+
+    static double getSum(int[] a) {
+        double res = 0;
+        for (int i : a) {
+            res += i;
+        }
+        return res;
+    }
+
+    static double getTotalEntropy(int[][] a) {
+        double m = 0, res = 0;
+        for (int[] i : a) {
+            double mj = getSum(i);
+            double ej = getEntropy(i);
+            res += mj * ej;
+            m += mj;
+        }
+        return res / m;
+    }
+
+    static double getTotalPurity(int[][] a) {
+        double res = 0, m = 0;
+        for (int[] i : a) {
+            double mj = getSum(i);
+            double pj = getPurity(i);
+            res += mj * pj;
+            m += mj;
+        }
+        return res / m;
+    }
+
+    static double getPurity(int[] a) {
+        double max = -1, sum = getSum(a);
+        for (int i : a) {
+            if (((double) i) / sum > max) {
+                max = ((double) i) / sum;
+            }
+        }
+        return max;
+    }
+
+    static void getClassFileContents() {
+        int counter = 0;
+        for (String x : readFile(new File(classFile))) {
+            if (!x.isEmpty() && x.contains(",")) {
+                String y[] = x.split(",");
+                classFileVals.put(Integer.parseInt(y[0]), y[1]);
+                if (!labels.containsKey(y[1])) {
+                    labels.put(y[1], counter++);
+                }
+            }
         }
     }
 

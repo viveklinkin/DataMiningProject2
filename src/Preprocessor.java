@@ -168,11 +168,10 @@ public class Preprocessor {
         writeFile(outputPath + "ijvFile1", ijvFileContent1);
         writeFile(outputPath + "ijvFile2", ijvFileContent2);
         writeFile(outputPath + "ijvFile3", ijvFileContent3);
-        for (Entry<String, Integer> frequencyMapEntry : stringIdMap.entrySet()) {
-            stringIdFile.add(frequencyMapEntry.getValue() + ","
-                    + frequencyMapEntry.getKey());
+        for (Article a : articleLists) {
+            stringIdFile.add(a.id + "," + a.topic);
         }
-        writeFile(outputPath + "stringId", stringIdFile);
+        writeFile(outputPath + "reuters.class", stringIdFile);
 
     }
 

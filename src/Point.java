@@ -13,6 +13,17 @@ class Point {
     String crit;
     private LinkedHashMap<Integer, Double> allPoints;
 
+    public double cosinecomp(Point b){
+        double res = 0;
+        Point smaller = (jv.size() > b.getjv().size())? b  : this;
+        Point larger = (jv.size() > b.getjv().size())? this  : b;
+        for(Integer i : smaller.getjv().keySet()){
+            if(larger.getjv().containsKey(i)){
+                res += b.getjv().get(i) * jv.get(i);
+            }
+        }
+        return res;
+    }
     public double ssecomp(Point b) {
         HashSet<Integer> done = new HashSet<>();
         double res = 0;
