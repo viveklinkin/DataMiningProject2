@@ -33,22 +33,14 @@ public class I2 {
             init(current_trial);
             while (true) {
                 double numchange = allocPoints();
-                System.out.println("NUMCHANHES: " + numchange);
+                System.out.println("changes: " + numchange);
                 if (numchange == 0) {
                     break;
                 }
                 computeCentroids();
             }
 
-            double I2Val = 0;
-            Map<Integer, Point> clusteringData = new HashMap<>();
-            for (Point p : clusters) {
-                clusteringData.put(p.id, p);
-            }
-            for (Point p : docs) {
-                Point pr = clusteringData.get(p.cluster);
-                I2Val += pr.cosinecomp(p);
-            }
+            double I2Val = getI2();
             System.out.println("I2:" + I2Val);
             if (I2Val > highestI2) {
                 output.clear();
@@ -60,6 +52,19 @@ public class I2 {
         }
         System.out.println("highest:" + highestI2);
         return output;
+    }
+
+    private double getI2() {
+        double I2Val = 0;
+        Map<Integer, Point> clusteringData = new HashMap<>();
+        for (Point p : clusters) {
+            clusteringData.put(p.id, p);
+        }
+        for (Point p : docs) {
+            Point pr = clusteringData.get(p.cluster);
+            I2Val += pr.cosinecomp(p);
+        }
+        return I2Val;
     }
 
     private void init(int trialnum) {

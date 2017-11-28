@@ -1,8 +1,5 @@
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 
 class Point {
@@ -11,33 +8,49 @@ class Point {
     int id, cluster, n;
     boolean isCentroid = false;
     String crit;
+    double magn = 0;
     private LinkedHashMap<Integer, Double> allPoints;
 
-    public double cosinecomp(Point b){
+    public double magnitude() {
+        if (magn != 0) {
+            return magn;
+        }
+        double d = 0;
+        for (int i : jv.keySet()) {
+            d += jv.get(i) * jv.get(i);
+        }
+        if (d > 1) {
+            return 1.0;
+        }
+        return Math.sqrt(d);
+    }
+
+    public double cosinecomp(Point b) {
         double res = 0;
-        Point smaller = (jv.size() > b.getjv().size())? b  : this;
-        Point larger = (jv.size() > b.getjv().size())? this  : b;
-        for(Integer i : smaller.getjv().keySet()){
-            if(larger.getjv().containsKey(i)){
-                res += b.getjv().get(i) * jv.get(i);
+        Point smaller = (jv.size() > b.getjv().size()) ? b : this;
+        Point larger = (jv.size() > b.getjv().size()) ? this : b;
+        for (Integer i : smaller.getjv().keySet()) {
+            if (larger.getjv().containsKey(i)) {
+                res += larger.getjv().get(i) * smaller.getjv().get(i);
             }
         }
-        return res;
+        return res / (larger.magnitude() * smaller.magnitude());
     }
+
     public double ssecomp(Point b) {
         HashSet<Integer> done = new HashSet<>();
         double res = 0;
-        for (Integer i : b.getjv().keySet()) {
+        for (int i : b.getjv().keySet()) {
             if (!jv.containsKey(i)) {
-                res += b.getjv().get(i);
+                res += b.getjv().get(i) * b.getjv().get(i);
             } else {
-                res += Math.abs(jv.get(i) - b.getjv().get(i));
+                res += (jv.get(i) - b.getjv().get(i)) * (jv.get(i) - b.getjv().get(i));
                 done.add(i);
             }
         }
-        for (Integer i : jv.keySet()) {
+        for (int i : jv.keySet()) {
             if (!done.contains(i)) {
-                res += jv.get(i);
+                res += jv.get(i) * jv.get(i);
             }
         }
         return res;
@@ -71,9 +84,12 @@ class Point {
             return;
         }
         jv.clear();
+        magn = 0;
         for (Integer currentKey : allPoints.keySet()) {
+            magn += (allPoints.get(currentKey) / n) * (allPoints.get(currentKey) / n);
             jv.put(currentKey, allPoints.get(currentKey) / n);
         }
+        magn = Math.sqrt(magn);
         n = 0;
         allPoints.clear();
     }

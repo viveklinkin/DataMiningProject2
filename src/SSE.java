@@ -32,9 +32,9 @@ public class SSE {
             System.out.println("iterNumber:" + current_trial);
             init(current_trial);
             while (true) {
-                double numchange = allocPoints();
+                int numchange = allocPoints();
                 System.out.println("NUMCHANHES: " + numchange);
-                if (numchange / (double) n < 0.01) {
+                if (numchange == 0) {
                     break;
                 }
                 computeCentroids();

@@ -14,9 +14,9 @@ import java.util.Map.Entry;
  */
 public class kcluster {
 
-    final static String SSE_CRITERION = "SSE";
-    final static String I2_CRITERION = "I2";
-    final static String E1_CRITERION = "E1";
+    static final String SSE_CRITERION = "SSE";
+    static final String I2_CRITERION = "I2";
+    static final String E1_CRITERION = "E1";
 
     static final LinkedHashMap<Integer, Map<Integer, Double>> ijv = new LinkedHashMap<>();
     static final TreeSet<Point> centroids = new TreeSet<>();
@@ -27,10 +27,8 @@ public class kcluster {
     static String classFile = "/home/vivek/NetBeansProjects/JavaApplication5/output/reuters.class";
     static String outputFile = "";
     static int numtrials = 20;
-    static int numclusters = 10;
-
-    static int outp = 0;
-    static String clusterteringCriterion = "E1";
+    static int numclusters = 20;
+    static String clusterteringCriterion = "SSE";
 
     public static void main(String args[]) {
         getijv();
@@ -58,7 +56,12 @@ public class kcluster {
             int labelNo = labels.get(classFileVals.get(articleNo));
             matrix[clusterNo][labelNo]++;
         }
-
+        for (int i = 0; i < matrix.length; i++) {
+            for (int j = 0; j < matrix[i].length; j++) {
+                System.out.print(matrix[i][j] + "  ");
+            }
+            System.out.println("");
+        }
         System.out.println("Purity: " + getTotalPurity(matrix));
         System.out.println("Entropy: " + getTotalEntropy(matrix));
     }
@@ -132,7 +135,10 @@ public class kcluster {
     static void getVals(String[] args) {
         inputFile = args[0];
         clusterteringCriterion = args[1];
-
+        classFile = args[2];
+        numclusters = Integer.parseInt(args[3]);
+        numtrials = Integer.parseInt(args[4]);
+        outputFile = args[5];
     }
 
     static void getijv() {
