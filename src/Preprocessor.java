@@ -16,9 +16,9 @@ public class Preprocessor {
     private static Pattern bodyP = Pattern
             .compile("<BODY[.\\s\\D\\d]*?>([\\s\\d\\D.]*?[^</BODY>])</BODY>");
 
-    private static final String file = "/home/vivek/NetBeansProjects/JavaApplication5/reuters/";
-    private static final String stopLL = "/home/vivek/NetBeansProjects/JavaApplication5/reuters/stoplist.txt";
-    private static final String outputPath = "/home/vivek/NetBeansProjects/JavaApplication5/output/";
+    private static final String file = "reuters21578";
+    private static final String stopLL = "reuters21578/stoplist.txt";
+    private static final String outputPath = "output/";
 
     private static Map<String, Integer> topicFrequency;
     private static Map<String, Integer> stringIdMap;
@@ -26,6 +26,8 @@ public class Preprocessor {
     private static Set<String> stopList;
 
     public static void main(String[] args) {
+        File f1 = new File(outputPath);
+        f1.mkdir();
         final File f = new File(file);
         final File[] roitersFiles = f.listFiles();
         final List<List<String>> roiterData = new ArrayList<>();
@@ -153,13 +155,20 @@ public class Preprocessor {
             }
         }
 
-        writeFile(outputPath + "ijvFile1", ijvFileContent1);
-        writeFile(outputPath + "ijvFile2", ijvFileContent2);
-        writeFile(outputPath + "ijvFile3", ijvFileContent3);
+        writeFile(outputPath + "freq.csv", ijvFileContent1);
+        writeFile(outputPath + "sqrtfreq.csv", ijvFileContent2);
+        writeFile(outputPath + "log2freq.csv", ijvFileContent3);
         for (Article a : articleLists) {
             stringIdFile.add(a.id + "," + a.topic);
         }
-        writeFile(outputPath + "reuters.class", stringIdFile);
+        writeFile(outputPath + "reuters21578.class", stringIdFile);
+        stringIdFile.clear();
+        for(String s : stringIdMap.keySet()){
+            stringIdFile.add(stringIdMap.get(s) + "," + s);
+        }
+        Collections.sort(stringIdFile);
+        writeFile(outputPath + "reuters21578.clabel", stringIdFile);
+        
 
     }
 

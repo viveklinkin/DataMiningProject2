@@ -26,11 +26,12 @@ public class kcluster {
     static String inputFile = "/home/vivek/NetBeansProjects/JavaApplication5/output/ijvFile1";
     static String classFile = "/home/vivek/NetBeansProjects/JavaApplication5/output/reuters.class";
     static String outputFile = "";
-    static int numtrials = 20;
-    static int numclusters = 20;
-    static String clusterteringCriterion = "SSE";
+    static int numtrials = 4;
+    static int numclusters = 10;
+    static String clusterteringCriterion = "E1";
 
     public static void main(String args[]) {
+        getVals(args);
         getijv();
         getClassFileContents();
         Map<Integer, Integer> res = null;
@@ -64,6 +65,11 @@ public class kcluster {
         }
         System.out.println("Purity: " + getTotalPurity(matrix));
         System.out.println("Entropy: " + getTotalEntropy(matrix));
+        List<String> outputFilec = new ArrayList<String>();
+        for (int i : res.keySet()) {
+            outputFilec.add(i + "," + res.get(i));
+        }
+        writeFile(outputFile, outputFilec);
     }
 
     static double getEntropy(int[] a) {

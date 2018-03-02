@@ -8,19 +8,19 @@ public class E1 {
     int nclusters;
     int trials;
     int n;
-    List<Point> docs;
-    Set<Point> clusters;
-    Point globalCenter;
-    HashMap<Integer, Integer> sizeMap;
+    List<Cluster> docs;
+    HashMap<Integer, Cluster> clusters;
+    Cluster globalCenter;
+    double e1crit = Double.MAX_VALUE;
 
     public E1(int numclus, int numtrials, Map<Integer, Map<Integer, Double>> ijv) {
-        clusters = new HashSet<>();
+        clusters = new HashMap<>();
         docs = new ArrayList<>();
         this.nclusters = numclus;
         this.trials = numtrials;
         this.n = ijv.size();
         for (Entry<Integer, Map<Integer, Double>> currentEntry : ijv.entrySet()) {
-            Point p = new Point(currentEntry.getKey(), kcluster.E1_CRITERION, false);
+            Cluster p = new Cluster(currentEntry.getKey());
             p.setjv(currentEntry.getValue());
             docs.add(p);
         }
@@ -39,21 +39,13 @@ public class E1 {
                 if (numchange == 0) {
                     break;
                 }
-                computeCentroids();
+                //computeCentroids();
             }
-
-            double E1Val = 0;
-//            Map<Integer, Point> clusteringData = new HashMap<>();
-//            for (Point p : clusters) {
-//                clusteringData.put(p.id, p);
-//            }
-            for(Point p : clusters){
-                E1Val += sizeMap.get(p.id) * globalCenter.cosinecomp(p);
-            }
+            double E1Val = getE1();
             System.out.println("E1:" + E1Val);
             if (E1Val < lowestE1) {
                 output.clear();
-                for (Point p : docs) {
+                for (Cluster p : docs) {
                     output.put(p.id, p.cluster);
                 }
                 lowestE1 = E1Val;
@@ -63,55 +55,71 @@ public class E1 {
         return output;
     }
 
-    private void init(int trialnum) {
-        sizeMap = new HashMap<>();
-        clusters.clear();
-        globalCenter = new Point(-1, kcluster.E1_CRITERION, true);
-        for (Point p : docs) {
-            p.cluster = -1;
-            globalCenter.addPoint(p);
+    private double getE1() {
+        double E1Val = 0;
+        for (Cluster p : clusters.values()) {
+            E1Val += p.n * globalCenter.cosinecomp(p);
         }
-        globalCenter.computeCentroid();
+        return E1Val;
+    }
+
+    private void init(int trialnum) {
+        clusters.clear();
         Random rand = new Random(seeds[trialnum]);
         for (int i = 0; i < nclusters; i++) {
-            Point p = new Point(i, kcluster.I2_CRITERION, true);
+            Cluster p = new Cluster(i);
             int x = rand.nextInt(n);
             p.setjv(docs.get(x).getjv());
-            clusters.add(p);
-            sizeMap.put(i, 0);
+            clusters.put(i, p);
         }
-
+        globalCenter = new Cluster(-1);
+        for (Cluster p : docs) {
+            globalCenter.addPoint(p);
+            int x = -1;
+            boolean x1 = false;
+            double dist = -1;
+            for (Cluster c : clusters.values()) {
+                if (dist < c.cosinecomp(p)) {
+                    dist = c.cosinecomp(p);
+                    x = c.id;
+                    x1 = true;
+                }
+            }
+            p.cluster = x;
+            clusters.get(x).addPoint(p);
+        }
+        e1crit = getE1();
     }
 
     private int allocPoints() {
-        for(int i : sizeMap.keySet()){
-            sizeMap.put(i, 0);
-        }
         int changes = 0;
-        for (Point p : docs) {
-            double sim = -1;
-            Point closest = null;
-            for (Point k : clusters) {
-                double temp = k.cosinecomp(p);
-                if (temp > sim) {
-                    sim = temp;
-                    closest = k;
+        for (Cluster p : docs) {
+            double Hsim = Double.MAX_VALUE;
+            Cluster farthest = null;
+            for (Cluster k : clusters.values()) {
+                if (k.id != p.cluster) {
+                    double temp1 = k.cosinecomp(globalCenter);
+                    double temp2 = clusters.get(p.cluster).cosinecomp(globalCenter);
+                    double temp4 = k.ifPointAdded(p.getjv(), globalCenter);
+                    double temp3 = clusters.get(p.cluster).ifPointRemoved(p.getjv(), globalCenter);
+                    double e1critd = e1crit + temp4 + temp3 - temp2 - temp1;
+                    if (e1critd < e1crit) {
+                        if (e1critd < Hsim) {
+                            Hsim = e1critd;
+                            farthest = k;
+                        }
+                    }
                 }
             }
-            if (p.cluster != closest.id) {
+            if (farthest != null) {
                 changes++;
-                p.cluster = closest.id;
-                
-            }  
-            closest.addPoint(p);
-            sizeMap.put(closest.id, sizeMap.get(closest.id) + 1);
+                farthest.addPoint(p);
+                Cluster currentc = clusters.get(p.cluster);
+                currentc.removePoint(p.getjv());
+                p.cluster = farthest.id;
+            }
         }
+        System.out.println(e1crit);
         return changes;
-    }
-
-    private void computeCentroids() {
-        for (Point p : clusters) {
-            p.computeCentroid();
-        }
     }
 }
